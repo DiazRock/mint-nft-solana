@@ -1,7 +1,18 @@
 {
+  "name": "nft-minter-cli",
+  "version": "1.0.0",
+  "description": "A CLI tool to mint nft on solana blockchain.",
+  "main": "bin/index.js",
   "dependencies": {
+    "@project-serum/sol-wallet-adapter": "^0.2.5",
     "@solana/spl-token": "^0.1.8",
-    "@solana/web3.js": "^1.24.2"
+    "@solana/web3.js": "^1.24.2",
+    "yargs": "^17.1.1"
+  },
+  "author": "DiazRock",
+  "license": "MIT",
+  "bin": {
+    "mint-nft-sol": "./bin/index.js"
   },
   "type": "module"
 }

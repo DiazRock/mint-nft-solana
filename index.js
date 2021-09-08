@@ -1,17 +1,31 @@
-import { Connection, clusterApiUrl, Keypair, LAMPORTS_PER_SOL, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
+import { Connection, 
+         clusterApiUrl, 
+         Keypair, 
+         LAMPORTS_PER_SOL, 
+         Transaction, 
+         sendAndConfirmTransaction } from '@solana/web3.js';
 import splToken from '@solana/spl-token'
+import Wallet from '@project-serum/sol-wallet-adapter'
+//import { connection } from './src/connection'
 
 (async () => {
-    // Connect to cluster
+    
+    // Connect to a cluster
     const connection = new Connection(
-      clusterApiUrl("devnet"),
-      'confirmed',
-    );
-  
-    // Generate a new wallet keypair and airdrop SOL
-    const fromWallet = Keypair.generate();
+        clusterApiUrl("devnet"),
+        'confirmed'
+      );
+
+    // Connect to a wallet service.
+    const provideUrl = 'https://www.sollet.io' // There must be an existing wallet.
+    const wallet = new Wallet(provideUrl);
+    wallet.on('connect', publicKey => console.log('Connected to ' + publicKey.toBase58()))
+    wallet.on('disconnect', () => console.log('Disconnected'))
+    await wallet.connect()
+
+    // Generate an airdrop SOL
     const fromAirdropSignature = await connection.requestAirdrop(
-      fromWallet.publicKey,
+      wallet.publicKey,
       LAMPORTS_PER_SOL,
     );
     //wait for airdrop confirmation
@@ -20,20 +34,20 @@ import splToken from '@solana/spl-token'
     //create new token mint
     const mint = await splToken.Token.createMint(
       connection,
-      fromWallet,
-      fromWallet.publicKey,
+      wallet,
+      wallet.publicKey,
       null,
       9,
       splToken.TOKEN_PROGRAM_ID,
     );
   
-    //get the token account of the fromWallet Solana address, if it does not exist, create it
+    //get the token account of the wallet Solana address, if it does not exist, create it
     const fromTokenAccount = await mint.getOrCreateAssociatedAccountInfo(
-      fromWallet.publicKey,
+      wallet.publicKey,
     );
   
-     // Generate a new wallet to receive newly minted token
-     const toWallet = Keypair.generate();
+     // You can return the minted token to a new wallet, or to the old one. 
+     const toWallet = wallet;
   
     //get the token account of the toWallet Solana address, if it does not exist, create it
     const toTokenAccount = await mint.getOrCreateAssociatedAccountInfo(
@@ -43,7 +57,7 @@ import splToken from '@solana/spl-token'
     //minting 1 new token to the "fromTokenAccount" account we just returned/created
     await mint.mintTo(
       fromTokenAccount.address, //who it goes to
-      fromWallet.publicKey, // minting authority
+      wallet.publicKey, // minting authority
       [], // multisig
       1000000000, // how many
     );
@@ -52,17 +66,17 @@ import splToken from '@solana/spl-token'
       mint.publicKey,
       null,
       "MintTokens",
-      fromWallet.publicKey,
+      wallet.publicKey,
       []
     )
-  
+    console.log(mint)
     // Add token transfer instructions to transaction
     const transaction = new Transaction().add(
       splToken.Token.createTransferInstruction(
         splToken.TOKEN_PROGRAM_ID,
         fromTokenAccount.address,
         toTokenAccount.address,
-        fromWallet.publicKey,
+        wallet.publicKey,
         [],
         1,
       ),
@@ -72,7 +86,7 @@ import splToken from '@solana/spl-token'
     const signature = await sendAndConfirmTransaction(
       connection,
       transaction,
-      [fromWallet],
+      [wallet],
       {commitment: 'confirmed'},
     );
     console.log('SIGNATURE', signature);
